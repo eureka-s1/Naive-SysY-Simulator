@@ -251,12 +251,12 @@ impl GenerateIR for Stmt {
                 Ok(())
             }
             Stmt::Break => {
-                let (entry, exit) = env.loopstack.top();
+                let (_, exit) = env.loopstack.top();
                 env.jump_inst(exit);
                 Err(ControlFlow::Break)
             }
             Stmt::Continue => {
-                let (entry, exit) = env.loopstack.top();
+                let (entry, _) = env.loopstack.top();
                 env.jump_inst(entry);
                 Err(ControlFlow::Continue)
             }

@@ -4,7 +4,7 @@ pub mod ast_df;
 
 // use koopa::back::KoopaGenerator;
 use lalrpop_util::lalrpop_mod;
-use std::{env::args, str::FromStr};
+use std::{env::args};
 use std::fs::read_to_string;
 use std::process::exit;
 

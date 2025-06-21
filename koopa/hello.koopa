@@ -1,0 +1,240 @@
+decl @getint(): i32
+
+decl @getch(): i32
+
+decl @getarray(*i32): i32
+
+decl @putint(i32): i32
+
+decl @putch(i32)
+
+decl @putarray(i32, *i32)
+
+decl @starttime()
+
+decl @stoptime()
+
+fun @main(): i32 {
+%main_0entry:
+  %0 = alloc [[i32, 3], 5]
+  %1 = alloc [[i32, 3], 5]
+  %2 = getelemptr %1, 0
+  %3 = getelemptr %2, 0
+  %4 = getptr %3, 0
+  store 0, %4
+  %5 = getptr %3, 1
+  store 0, %5
+  %6 = getptr %3, 2
+  store 0, %6
+  %7 = getptr %3, 3
+  store 0, %7
+  %8 = getptr %3, 4
+  store 0, %8
+  %9 = getptr %3, 5
+  store 0, %9
+  %10 = getptr %3, 6
+  store 0, %10
+  %11 = getptr %3, 7
+  store 0, %11
+  %12 = getptr %3, 8
+  store 0, %12
+  %13 = getptr %3, 9
+  store 0, %13
+  %14 = getptr %3, 10
+  store 0, %14
+  %15 = getptr %3, 11
+  store 0, %15
+  %16 = getptr %3, 12
+  store 0, %16
+  %17 = getptr %3, 13
+  store 0, %17
+  %18 = getptr %3, 14
+  store 0, %18
+  %19 = alloc [[i32, 3], 5]
+  %20 = getelemptr %19, 0
+  %21 = getelemptr %20, 0
+  %22 = getptr %21, 0
+  store 1, %22
+  %23 = getptr %21, 1
+  store 2, %23
+  %24 = getptr %21, 2
+  store 3, %24
+  %25 = getptr %21, 3
+  store 4, %25
+  %26 = getptr %21, 4
+  store 5, %26
+  %27 = getptr %21, 5
+  store 6, %27
+  %28 = getptr %21, 6
+  store 7, %28
+  %29 = getptr %21, 7
+  store 8, %29
+  %30 = getptr %21, 8
+  store 9, %30
+  %31 = getptr %21, 9
+  store 10, %31
+  %32 = getptr %21, 10
+  store 11, %32
+  %33 = getptr %21, 11
+  store 12, %33
+  %34 = getptr %21, 12
+  store 13, %34
+  %35 = getptr %21, 13
+  store 14, %35
+  %36 = getptr %21, 14
+  store 15, %36
+  %37 = alloc [[i32, 3], 5]
+  %38 = getelemptr %37, 0
+  %39 = getelemptr %38, 0
+  %40 = getptr %39, 0
+  store 1, %40
+  %41 = getptr %39, 1
+  store 2, %41
+  %42 = getptr %39, 2
+  store 3, %42
+  %43 = getptr %39, 3
+  store 4, %43
+  %44 = getptr %39, 4
+  store 5, %44
+  %45 = getptr %39, 5
+  store 6, %45
+  %46 = getptr %39, 6
+  store 7, %46
+  %47 = getptr %39, 7
+  store 8, %47
+  %48 = getptr %39, 8
+  store 9, %48
+  %49 = getptr %39, 9
+  store 10, %49
+  %50 = getptr %39, 10
+  store 11, %50
+  %51 = getptr %39, 11
+  store 12, %51
+  %52 = getptr %39, 12
+  store 13, %52
+  %53 = getptr %39, 13
+  store 14, %53
+  %54 = getptr %39, 14
+  store 15, %54
+  %55 = alloc [[i32, 3], 5]
+  %56 = getelemptr %55, 0
+  %57 = getelemptr %56, 0
+  %58 = getptr %57, 0
+  store 1, %58
+  %59 = getptr %57, 1
+  store 2, %59
+  %60 = getptr %57, 2
+  store 3, %60
+  %61 = getptr %57, 3
+  store 4, %61
+  %62 = getptr %57, 4
+  store 5, %62
+  %63 = getptr %57, 5
+  store 6, %63
+  %64 = getptr %57, 6
+  store 7, %64
+  %65 = getptr %57, 7
+  store 8, %65
+  %66 = getptr %57, 8
+  store 9, %66
+  %67 = getptr %57, 9
+  store 10, %67
+  %68 = getptr %57, 10
+  store 11, %68
+  %69 = getptr %57, 11
+  store 12, %69
+  %70 = getptr %57, 12
+  store 13, %70
+  %71 = getptr %57, 13
+  store 14, %71
+  %72 = getptr %57, 14
+  store 15, %72
+  %73 = alloc [i32, 5]
+  %74 = alloc [[i32, 3], 5]
+  %75 = getelemptr %74, 0
+  %76 = getelemptr %75, 0
+  %77 = getptr %76, 0
+  store 1, %77
+  %78 = getptr %76, 1
+  store 2, %78
+  %79 = getptr %76, 2
+  store 3, %79
+  %80 = getptr %76, 3
+  store 4, %80
+  %81 = getptr %76, 4
+  store 0, %81
+  %82 = getptr %76, 5
+  store 0, %82
+  %83 = getptr %76, 6
+  store 7, %83
+  %84 = getptr %76, 7
+  store 0, %84
+  %85 = getptr %76, 8
+  store 0, %85
+  %86 = getptr %76, 9
+  store 10, %86
+  %87 = getptr %76, 10
+  store 11, %87
+  %88 = getptr %76, 11
+  store 12, %88
+  %89 = getptr %76, 12
+  store 0, %89
+  %90 = getptr %76, 13
+  store 0, %90
+  %91 = getptr %76, 14
+  store 0, %91
+  %92 = alloc [i32, 3]
+  %93 = alloc [[[i32, 4], 3], 2]
+  %94 = getelemptr %93, 0
+  %95 = getelemptr %94, 0
+  %96 = getelemptr %95, 0
+  %97 = getptr %96, 0
+  store 1, %97
+  %98 = getptr %96, 1
+  store 2, %98
+  %99 = getptr %96, 2
+  store 3, %99
+  %100 = getptr %96, 3
+  store 4, %100
+  %101 = getptr %96, 4
+  store 5, %101
+  %102 = getptr %96, 5
+  store 0, %102
+  %103 = getptr %96, 6
+  store 0, %103
+  %104 = getptr %96, 7
+  store 0, %104
+  %105 = getptr %96, 8
+  store 0, %105
+  %106 = getptr %96, 9
+  store 0, %106
+  %107 = getptr %96, 10
+  store 0, %107
+  %108 = getptr %96, 11
+  store 0, %108
+  %109 = getptr %96, 12
+  store 0, %109
+  %110 = getptr %96, 13
+  store 0, %110
+  %111 = getptr %96, 14
+  store 0, %111
+  %112 = getptr %96, 15
+  store 0, %112
+  %113 = getptr %96, 16
+  store 0, %113
+  %114 = getptr %96, 17
+  store 0, %114
+  %115 = getptr %96, 18
+  store 0, %115
+  %116 = getptr %96, 19
+  store 0, %116
+  %117 = getptr %96, 20
+  store 0, %117
+  %118 = getptr %96, 21
+  store 0, %118
+  %119 = getptr %96, 22
+  store 0, %119
+  %120 = getptr %96, 23
+  store 0, %120
+  ret 4
+}
