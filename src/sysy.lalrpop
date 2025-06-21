@@ -1,0 +1,353 @@
+use crate::ast_df::*;
+
+grammar;
+
+// http://lalrpop.github.io/lalrpop/tutorial/006_macros.html
+// Patterns like `T, T, T`, can be empty.
+Comma<T>: Vec<T> = {
+    <mut v: (<T> ",")*> <e: T?> => match e {
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
+};
+
+// Patterns like `[T][T][T]`, cannot be empty.
+Square<T>: Vec<T> = ("[" <T> "]")+;
+
+// Patterns like `[T][T][T]`, can be empty.
+SquOrEmpty<T>: Vec<T> = ("[" <T> "]")*;
+
+// Lexer
+
+match {
+  r"\s*" => {},
+  r"//[^\n\r]*[\n\r]*" => {},
+  r"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/" => {},
+  _
+}
+
+
+Ident: String = r"[_a-zA-Z][_a-zA-Z0-9]*" => <>.to_string();
+
+IntConst: i32 = {
+  r"[1-9][0-9]*" => i32::from_str_radix(<>, 10).unwrap(),
+  r"0[0-7]*" => i32::from_str_radix(<>, 8).unwrap(),
+  r"0[xX][0-9a-fA-F]+" => i32::from_str_radix(&<>[2..], 16).unwrap(),
+}
+
+Number: i32 = <num: IntConst> => <>;
+
+// Parser
+
+pub CompUnit: CompUnit = <items: (GlobalItem)*> => CompUnit { <> };
+
+GlobalItem: GlobalItem = {
+  <FuncDef> => GlobalItem::FuncDef(<>),
+  <GlobalDecl> => GlobalItem::Decl(<>),
+};
+
+FuncDef: FuncDef = {
+  <func_type: BType> <ident: Ident> "(" <params: Comma<FuncFParam>> ")" <block: Block> => {
+    FuncDef { <> }
+  },
+};
+
+/// BType ::= "int" | "void"
+BType: BType = {
+    "int"  => BType::Int,
+    "void" => BType::Void,
+};
+
+FuncFParam: FuncFParam = {
+  <ty: BType> <id: Ident> => FuncFParam { ty: ty, id: id, dims: None },
+  <ty: BType> <id: Ident> "[" "]" <dims: SquOrEmpty<ConstExp>> => FuncFParam { ty: ty, id: id, dims: Some(dims) },
+};
+
+Block: Block = "{" <items: (BlockItem)*> "}" => Block { <> };
+
+BlockItem: BlockItem = {
+  <Decl> => BlockItem::Decl(<>),
+  <Stmt> => BlockItem::Stmt(<>),
+};
+
+// Stmt ::= LVal "=" Exp ";"
+//        | [Exp] ";"
+//        | Block
+//        | "if" "(" Exp ")" Stmt ["else" Stmt]
+//        | "while" "(" Exp ")" Stmt
+//        | "return" [Exp] ";";
+//        | "break" ";"
+//        | "continue" ";"
+Stmt: Stmt = {
+  <OpenStmt> => <>,
+  <ClosedStmt> => <>,
+};
+
+OpenStmt: Stmt = {
+  "if" "(" <cond: Exp> ")" <stmt: Stmt> => Stmt::If(If{
+    cond: cond,
+    stmt: Box::new(stmt),
+    else_stmt: None,
+  }),
+  "if" "(" <cond: Exp> ")" <stmt: ClosedStmt> "else" <else_stmt: OpenStmt> => Stmt::If(If {
+    cond: cond,
+    stmt: Box::new(stmt),
+    else_stmt: Some(Box::new(else_stmt)),
+  }),
+  "while" "(" <cond: Exp> ")" <stmt: OpenStmt> => Stmt::While(While {
+    cond: cond,
+    stmt: Box::new(stmt),
+  }),
+};
+
+ClosedStmt: Stmt = {
+  <SimpleStmt> => <>,
+  "if" "(" <cond: Exp> ")" <stmt: ClosedStmt> "else" <else_stmt: ClosedStmt> => Stmt::If(If {
+    cond: cond,
+    stmt: Box::new(stmt),
+    else_stmt: Some(Box::new(else_stmt)),
+  }),
+  "while" "(" <cond: Exp> ")" <stmt: ClosedStmt> => Stmt::While(While {
+    cond: cond,
+    stmt: Box::new(stmt),
+  }),
+};
+
+SimpleStmt: Stmt = {
+  ";"            => Stmt::Empty,
+  <Assign>       => Stmt::Assign(<>),
+  <Exp> ";"      => Stmt::Exp(<>),
+  <Block>        => Stmt::Block(<>),
+  <Return>       => Stmt::Return(<>),
+  "break" ";"    => Stmt::Break,
+  "continue" ";" => Stmt::Continue,
+};
+
+
+Assign: Assign = {
+  <lval : LVal> "=" <exp : Exp> ";" => Assign { <> },
+};
+
+Return : Return = {
+  "return" <exp: Exp> ";" => Return { exp: Some(exp) },
+  "return" ";" => Return { exp: None },
+};
+
+// LVal ::= Ident;
+LVal: LVal = {
+  <id: Ident> => LVal::Ident(<>),
+  <id: Ident> <exp: Square<Exp>> => LVal::Array(id, exp),
+};
+
+//////////////////////////////////////////////////////////////////////////
+// Variable declaration:
+
+// Decl ::= ConstDecl | VarDecl;
+Decl: Decl = {
+  <ConstDecl> => Decl::Const(<>),
+  <VarDecl> => Decl::Var(<>),
+};
+
+// ConstDecl ::= "const" "int" ConstDef {"," ConstDef} ";";
+ConstDecl: ConstDecl = {
+  "const" "int" <const_defs: Comma<ConstDef>> ";" => ConstDecl { is_global: false, const_defs: const_defs  },
+};
+
+// VarDecl ::= "int" VarDef {"," VarDef} ";";
+VarDecl: VarDecl = {
+  <ty: BType> <defs: Comma<VarDef>> ";" => VarDecl { is_global:false, defs: defs },
+};
+
+// ConstDef ::= Ident "=" ConstInitVal;
+ConstDef: ConstDef = {
+  <ident: Ident> "=" <const_init_val: ConstInitVal> => ConstDef {  
+    ident: ident,
+    init_val: const_init_val,
+    dims : None,
+  },
+  <ident: Ident> <dims: Square<ConstExp>> "=" <const_init_val: ConstInitVal> => ConstDef {
+    ident: ident,
+    init_val: const_init_val,
+    dims: Some(dims),
+  },
+};
+
+// ConstInitVal  ::= ConstExp | "{" [ConstInitVal {"," ConstInitVal}] "}";
+ConstInitVal: ConstInitVal = {
+  <ConstExp> => ConstInitVal::ConstExp(<>),
+  "{" <Comma<ConstInitVal>> "}" => ConstInitVal::InitList(<>),
+};
+
+// VarDef ::= IDENT | IDENT "=" InitVal;
+VarDef: VarDef = {
+  <ident: Ident> => VarDef { 
+    ident: ident, 
+    init_val: None, 
+    dims: None,
+  },
+  <ident: Ident> "=" <init_val: InitVal> => VarDef { 
+    ident: ident, 
+    init_val: Some(init_val), 
+    dims: None,
+  },
+  <ident: Ident> <dims: Square<ConstExp>> => VarDef {
+    ident: ident,
+    init_val: None,
+    dims: Some(dims),
+  },
+  <ident: Ident> <dims: Square<ConstExp>> "=" <init_val: InitVal> => VarDef {
+    ident: ident,
+    init_val: Some(init_val),
+    dims: Some(dims),
+  },
+};
+
+// InitVal ::= Exp;
+InitVal: InitVal = {
+  <Exp> => InitVal::Exp(<>),
+  "{" <Comma<InitVal>> "}" => InitVal::InitList(<>),
+};
+
+GlobalDecl: Decl = {
+  <GlobalConstDecl> => Decl::Const(<>),
+  <GlobalVarDecl> => Decl::Var(<>),
+};
+
+GlobalConstDecl: ConstDecl = {
+  "const" "int" <const_defs: Comma<ConstDef>> ";" => ConstDecl { is_global: true, const_defs: const_defs },
+};
+
+GlobalVarDecl: VarDecl = {
+  <ty: BType> <defs: Comma<VarDef>> ";" => VarDecl { is_global: true, defs: defs },
+};
+
+/////////////////////////////////////////////////////////////////////////////
+// Expression 
+
+// Exp ::= LOrExp;
+Exp: Exp = {
+  <LOrExp> => Exp::LOrExp(<>),
+};
+
+// ConstExp ::= Exp;
+ConstExp: ConstExp = {
+  <exp : Exp> => ConstExp { <> },
+};
+
+// LOrExp ::= LAndExp | LOrExp "||" LAndExp;
+LOrExp: LOrExp = {
+    <LAndExp> => LOrExp::LAnd(<>),
+    <l_or_exp: LOrExp> "||" <l_and_exp: LAndExp> => LOrExp::LOrLAnd(
+      Box::new(l_or_exp), 
+      l_and_exp,
+    ),
+};
+
+// LAndExp ::= EqExp | LAndExp "&&" EqExp;
+LAndExp: LAndExp = {
+    <EqExp> => LAndExp::Eq(<>),
+    <l_and_exp: LAndExp> "&&" <eq_exp: EqExp> => LAndExp::LAndEq(
+      Box::new(l_and_exp),
+      eq_exp,
+    ),
+};
+
+// EqExp ::= RelExp | EqExp ("==" | "!=") RelExp;
+EqExp: EqExp = {
+    <RelExp> => EqExp::Rel(<>),
+    <eq_exp: EqExp> <op: EqOp> <rel_exp: RelExp> => EqExp::EqRel(
+      Box::new(eq_exp),
+      op,
+      rel_exp,
+    ),
+};
+
+// RelExp ::= AddExp | RelExp ("<" | "<=" | ">" | ">=") AddExp;
+RelExp: RelExp = {
+  <AddExp> => RelExp::Add(<>),
+  <rel_exp: RelExp> <op: RelOp> <add_exp: AddExp> => RelExp::RelAdd(
+    Box::new(rel_exp),
+    op,
+    add_exp,
+  ),
+};
+
+// AddExp ::= MulExp | AddExp ("+" | "-") MulExp;
+AddExp: AddExp = {
+  <MulExp> => AddExp::Mul(<>),
+  <add_exp: AddExp> <op: AddOp> <mul_exp: MulExp> => AddExp::AddMul(
+    Box::new(add_exp),
+    op,
+    mul_exp,
+  ),
+};
+
+// MulExp ::= UnaryExp | MulExp ("*" | "/" | "%") UnaryExp;
+MulExp: MulExp = {
+  <UnaryExp> => MulExp::Unary(<>),
+  <mul_exp: MulExp> <op: MulOp> <unary_exp: UnaryExp> => MulExp::MulUnary(
+    Box::new(mul_exp),
+    op,
+    unary_exp,
+  ),
+};
+
+// UnaryExp ::= PrimaryExp 
+//            | UnaryOp UnaryExp
+//            | IDENT "(" [FuncRParams] ")"
+UnaryExp: UnaryExp = {
+  <PrimaryExp> => UnaryExp::PrimaryExp(<>),
+  <op: UnaryOp> <unary_exp: UnaryExp> => UnaryExp::Unary(
+    op,
+    Box::new(unary_exp),
+  ),
+  <FuncCall: FuncCall> => UnaryExp::FuncCall(<>),
+};
+
+// FuncCall ::= IDENT "(" [FuncRParams] ")"
+FuncCall: FuncCall = {
+  <id: Ident> "(" <args: Comma<Exp>> ")" => FuncCall {
+    id: id,
+    args: args,
+  },
+};
+
+// PrimaryExp ::= "(" Exp ")" | LVal | Number;
+PrimaryExp: PrimaryExp = {
+  <lval: LVal> => PrimaryExp::LVal(<>),
+  <num: Number> => PrimaryExp::Num(<>),
+  "(" <exp: Exp> ")" => PrimaryExp::Exp(Box::new(<>)),
+};
+
+UnaryOp: UnaryOp = {
+  "+" => UnaryOp::Plus,
+  "-" => UnaryOp::Minus,
+  "!" => UnaryOp::Not,
+};
+
+MulOp: MulOp = {
+  "*" => MulOp::Mul,
+  "/" => MulOp::Div,
+  "%" => MulOp::Mod,
+};
+
+AddOp: AddOp = {
+  "+" => AddOp::Add,
+  "-" => AddOp::Sub,
+};
+
+RelOp: RelOp = {
+  "<" => RelOp::Lt,
+  "<=" => RelOp::Le,
+  ">" => RelOp::Gt,
+  ">=" => RelOp::Ge,
+};
+
+EqOp: EqOp = {
+  "==" => EqOp::Eq,
+  "!=" => EqOp::Neq,
+};
+
