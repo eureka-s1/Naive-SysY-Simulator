@@ -5,7 +5,7 @@ use core::panic;
 use koopa::ir::*;
 use koopa::ir::builder_traits::*;
 
-use crate::ast_df::*;
+
 use crate::irgen::array::global_const_init;
 use crate::irgen::array::global_var_init;
 use crate::irgen::array::local_const_init;
@@ -15,6 +15,7 @@ use super::eval::EvalExp;
 use super::opt;
 use super::builtin;
 use super::array;
+use super::ast_df::*;
 
 use rand::Rng;
 use rand::distributions::Alphanumeric;

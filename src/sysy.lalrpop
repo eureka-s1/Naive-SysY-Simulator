@@ -1,4 +1,4 @@
-use crate::ast_df::*;
+use crate::irgen::ast_df::*;
 
 grammar;
 

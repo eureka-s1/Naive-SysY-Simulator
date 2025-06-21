@@ -1,6 +1,5 @@
 mod codegen;
 mod irgen;
-pub mod ast_df;
 
 // use koopa::back::KoopaGenerator;
 use lalrpop_util::lalrpop_mod;

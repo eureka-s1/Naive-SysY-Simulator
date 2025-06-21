@@ -2,7 +2,6 @@
 // mod exp;
 // mod stmt;
 
-use crate::ast_df::*;
 mod generate;
 mod env;
 mod scope;
@@ -11,6 +10,7 @@ mod loopstack;
 mod opt;
 mod builtin;
 mod array;
+pub mod ast_df;
 
 use koopa::ir::*;
 use koopa::back::KoopaGenerator;
@@ -18,6 +18,8 @@ use generate::GenerateIR;
 
 use std::io::Write;
 use std::fs::File;
+
+use ast_df::*;
 
 pub fn build_ir(ast: CompUnit) -> Option<Program> {
     let mut env = env::Env::default();

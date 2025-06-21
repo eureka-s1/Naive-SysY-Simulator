@@ -1,7 +1,7 @@
 
 use koopa::ir::builder::ValueBuilder;
 use koopa::ir::*;
-use crate::ast_df::*;
+use super::ast_df::*;
 use crate::irgen::generate::GenerateIR;
 
 use super::env::Env;

@@ -1,6 +1,6 @@
 use koopa::ir::ValueKind;
 
-use crate::ast_df::BType;
+use super::ast_df::*;
 
 use super::env::Env;
 
