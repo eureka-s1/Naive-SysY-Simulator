@@ -1,5 +1,6 @@
 mod codegen;
 mod irgen;
+mod simulator;
 
 // use koopa::back::KoopaGenerator;
 use lalrpop_util::lalrpop_mod;
@@ -33,6 +34,10 @@ fn try_main() -> Result<(), Box<dyn std::error::Error>> {
     args.next();
     let output = args.next().unwrap();
     
+    // add dir prefix
+    let input = format!("{}/{}", "testcase/c", input); 
+    // println!("input: {}, output: {}", input, output);
+
     // read input file
     let input = read_to_string(input)?;
 
@@ -47,12 +52,23 @@ fn try_main() -> Result<(), Box<dyn std::error::Error>> {
     let program = build_ir(ast).unwrap();
 
     match mode.as_str() {
-        "-koopa" => emit_ir(program, output),
-        _ => {
+        "-koopa" => {
+            let output = format!("{}/{}/{}", "testcase", "koopa", output);
+            emit_ir(program, output);
+        }
+        "-riscv" => {
             // generate ASM
             let mut asm_program = build_asm(&program);
+            let output = format!("{}/{}/{}", "testcase", "riscv", output);
             emit_asm(asm_program, output);
         }
+        "-sim" => {
+            // let mut asm_program = build_asm(&program);
+            // let output = format!("{}/{}/{}.s", "testcase", "riscv", output);
+            // emit_asm(asm_program, output);
+            simulator::pipe_exc();
+        }
+        _ => panic!("Unsupported Mode"),
     }
     Ok(())
 }

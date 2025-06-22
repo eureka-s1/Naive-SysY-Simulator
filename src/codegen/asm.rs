@@ -55,12 +55,51 @@ impl AsmProgram {
     
     pub fn emit_asm(&self) -> String {
         let mut asm_txt = String::new();
+
+        
+        asm_txt.push_str(".globl _trm_init\n");
+        asm_txt.push_str(".globl _start\n");
+
         for global_def in &self.global_defs {
-            asm_txt.push_str(&global_def.emit_asm());
+            asm_txt.push_str(&format!(".globl {}\n", global_def.label.to_string()));
         }
         for global in &self.globals {
-            asm_txt.push_str(&global.emit_asm());
+            asm_txt.push_str(&format!(".globl {}\n", global.label.name()));
         };
+
+        
+        asm_txt.push_str(".section .data\n");
+        for global_def in &self.global_defs {
+            asm_txt.push_str(&global_def.emit_asm());
+            asm_txt.push_str(&format!("\n"));
+        }
+
+
+        
+
+        asm_txt.push_str(".section .text\n");
+        asm_txt.push_str("_start:
+  la sp, stack_top        
+  jal _trm_init\n");
+
+        asm_txt.push_str("_trm_init:
+  addi sp, sp, -16
+  sd ra, 8(sp)
+  jal main
+  ebreak\n");
+        
+
+        for global in &self.globals {
+            asm_txt.push_str(&global.emit_asm());
+            asm_txt.push_str(&format!("\n"));
+        };
+
+        asm_txt.push_str(".section .bss
+.align 4
+stack_bottom:
+  .skip 4096
+stack_top:\n");
+
         asm_txt
     }
 }
@@ -69,8 +108,7 @@ impl AsmProgram {
 impl AsmGlobalDef {
     pub fn emit_asm(&self) -> String {
         let mut asm_txt = String::new();
-        asm_txt.push_str(&format!("  .data\n"));
-        asm_txt.push_str(&format!("  .globl {}\n", self.label.to_string()));
+        // asm_txt.push_str(&format!("  .globl {}\n", self.label.to_string()));
         asm_txt.push_str(&format!("{}:\n", self.label.to_string()));
         for init_val in &self.init_val {
             match init_val {
@@ -115,14 +153,17 @@ impl AsmGlobal {
 
     pub fn emit_asm(&self) -> String {
         let mut asm_txt = String::new();
-        match self.section {
-            Section::Text => {
-                asm_txt.push_str(&format!("  .text\n  .globl {}\n{}:\n", self.label.name(), self.label.name()));
-            },
-            Section::Data => {
-                asm_txt.push_str(&format!("  .data\n"));
-            },
-        };
+        // match self.section {
+        //     Section::Text => {
+        //         asm_txt.push_str(&format!("  .text\n"));
+        //         // asm_txt.push_str(&format!("  .globl {}\n", self.label.to_string()));
+        //         asm_txt.push_str(&format!("  .globl {}\n{}:\n", self.label.name(), self.label.name()));
+        //     },
+        //     Section::Data => {
+        //         asm_txt.push_str(&format!("  .data\n"));
+        //     },
+        // };
+        asm_txt.push_str(&format!("{}:\n", self.label.name()));
 
         for (index, local) in self.locals.iter().enumerate() {
             // skip the first label

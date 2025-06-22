@@ -1,5 +1,5 @@
 [package]
-name = "Navie-SysY-Simulator"
+name = "Naive-SysY-Simulator"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,6 +7,8 @@ edition = "2021"
 lalrpop-util = { version = "0.20.2", features = ["lexer"] }
 koopa = "0.0.8"
 rand = "0.8.5"
+object = "0.32"
+colored = "2.0"
 
 [build-dependencies]
 lalrpop = "0.20.2"
