@@ -17,7 +17,7 @@ pub fn pipe_exc() {
     let mut mem = Memory::new();
 
     // mem.load_image("testcase/c/hello").unwrap();
-    mem.load_image("testcase/bin/dummy.bin").unwrap();
+    mem.load_image("testcase/bin/load-store.bin").unwrap();
 
     let mut prog = Pipeline::new();
     prog.init();

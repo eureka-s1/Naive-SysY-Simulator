@@ -1,6 +1,7 @@
 use std::arch::x86_64::CpuidResult;
 
 use colored::Colorize;
+use object::Section;
 
 use super::cpu::*;
 use super::mem::*;
@@ -20,6 +21,12 @@ pub struct Instruction {
     pub inst_type: InstType,
 }
 
+#[macro_export]
+macro_rules! bits {
+    ($val:expr, $high:expr, $low:expr) => {
+        ($val >> $low) & ((1 << ($high - $low + 1)) - 1)
+    };
+}
 
 pub fn sext(val: u64, len: usize) -> u64 {
     let sign_bit = 1 << (len - 1);
@@ -30,12 +37,11 @@ pub fn sext(val: u64, len: usize) -> u64 {
     }
 }
 
-#[macro_export]
-macro_rules! bits {
-    ($val:expr, $high:expr, $low:expr) => {
-        ($val >> $low) & ((1 << ($high - $low + 1)) - 1)
-    };
+
+pub fn trunc(s: u64) -> u64 {
+    sext(bits!(s, 31, 0), 32)
 }
+
 
 
 #[macro_export]
@@ -155,7 +161,7 @@ pub fn execute_stage(cpu: &mut CPUState, s: &IDEXReg) -> EXMEMReg {
     let inst = s.inst;
     let match_res = check_inst(inst);
 
-    let (name, ty) = match match_res {
+    let (name, ..) = match match_res {
         None => {
             println!("{}", "Error".red());
             panic!("Invalid instruction: 0x{:x}", inst);
@@ -168,21 +174,21 @@ pub fn execute_stage(cpu: &mut CPUState, s: &IDEXReg) -> EXMEMReg {
     let imm = s.imm;
     let mut alu_out = 0;
 
-    println!("pc:= {} imm:={}", s.pc, imm);
-
+    // println!("exec stage: inst 0x{:x}", inst);
+    // println!("name = {}, src1 = 0x{:x}, src2 = 0x{:x}, imm = 0x{:x}", name, src1, src2, imm);
     match name {
         "lui"    => alu_out = imm,
-        "auipc"  => alu_out = s.pc + imm,
-        "jal"    => { cpu.next_pc = s.pc + imm; alu_out = s.pc + 4; },
-        "jalr"   => { cpu.next_pc = (src1 + imm) & !1; alu_out = s.pc + 4; },
-        "beq"    => cpu.next_pc = if src1 == src2 { s.pc + imm } else { s.pc + 4 },
-        "bne"    => cpu.next_pc = if src1 != src2 { s.pc + imm } else { s.pc + 4 },
-        "blt"    => cpu.next_pc = if (src1 as i64) < (src2 as i64) { s.pc + imm } else { s.pc + 4 },
-        "bge"    => cpu.next_pc = if (src1 as i64) >= (src2 as i64) { s.pc + imm } else { s.pc + 4 },
-        "bltu"   => cpu.next_pc = if src1 < src2 { s.pc + imm } else { s.pc + 4 },
-        "bgeu"   => cpu.next_pc = if src1 >= src2 { s.pc + imm } else { s.pc + 4 },
-        "lb" | "lh" | "lw" | "lbu" | "lhu" | "lwu" | "ld" => alu_out = src1 + imm,
-        "sb" | "sh" | "sw" | "sd" => alu_out = src1 + imm,
+        "auipc"  => alu_out = s.pc.wrapping_add(imm),
+        "jal"    => { cpu.next_pc = s.pc.wrapping_add(imm); alu_out = s.pc + 4; },
+        "jalr"   => { cpu.next_pc = (src1.wrapping_add(imm)) & !1; alu_out = s.pc + 4; },
+        "beq"    => cpu.next_pc = if src1 == src2 { s.pc.wrapping_add(imm) } else { s.pc + 4 },
+        "bne"    => cpu.next_pc = if src1 != src2 { s.pc.wrapping_add(imm) } else { s.pc + 4 },
+        "blt"    => cpu.next_pc = if (src1 as i64) < (src2 as i64) { s.pc.wrapping_add(imm) } else { s.pc + 4 },
+        "bge"    => cpu.next_pc = if (src1 as i64) >= (src2 as i64) { s.pc.wrapping_add(imm) } else { s.pc + 4 },
+        "bltu"   => cpu.next_pc = if src1 < src2 { s.pc.wrapping_add(imm) } else { s.pc + 4 },
+        "bgeu"   => cpu.next_pc = if src1 >= src2 { s.pc.wrapping_add(imm) } else { s.pc + 4 },
+        "lb" | "lh" | "lw" | "lbu" | "lhu" | "lwu" | "ld" => alu_out = src1.wrapping_add(imm),
+        "sb" | "sh" | "sw" | "sd" => alu_out = src1.wrapping_add(imm),
         "addi"   => alu_out = src1.wrapping_add(imm),
         "slti"   => alu_out = if (src1 as i64) < (imm as i64) { 1 } else { 0 },
         "sltiu"  => alu_out = if src1 < imm { 1 } else { 0 },
@@ -196,8 +202,8 @@ pub fn execute_stage(cpu: &mut CPUState, s: &IDEXReg) -> EXMEMReg {
         "slliw"  => alu_out = (src1.wrapping_shl(imm as u32) as i32) as u64,
         "srliw"  => alu_out = ((src1 as u32) >> (imm & 0x1F)) as u64,
         "sraiw"  => alu_out = ((src1 as i32) >> (imm & 0x1F)) as u64,
-        "add"    => alu_out = src1 + src2,
-        "sub"    => alu_out = src1 - src2,
+        "add"    => alu_out = src1.wrapping_add(src2),
+        "sub"    => alu_out = src1.wrapping_sub(src2),
         "sll"    => alu_out = src1 << (src2 & 0x3F),
         "slt"    => alu_out = if (src1 as i64) < (src2 as i64) { 1 } else { 0 },
         "sltu"   => alu_out = if src1 < src2 { 1 } else { 0 },
@@ -228,6 +234,7 @@ pub fn execute_stage(cpu: &mut CPUState, s: &IDEXReg) -> EXMEMReg {
         _ => {},
     }
 
+    println!("final alu: {}", alu_out);
     EXMEMReg { 
         pc: s.pc,
         inst: s.inst,
@@ -244,7 +251,7 @@ pub fn memory_stage(cpu: &mut CPUState, s: &EXMEMReg, mem: &mut Memory) -> MEMWB
     let inst = s.inst;
     let match_res = check_inst(inst);
 
-    let (name, ty) = match match_res {
+    let (name, ..) = match match_res {
         None => {
             println!("{}", "Error".red());
             panic!("Invalid instruction: 0x{:x}", inst);
@@ -256,14 +263,15 @@ pub fn memory_stage(cpu: &mut CPUState, s: &EXMEMReg, mem: &mut Memory) -> MEMWB
     let src2 = s.src2;
     let mut mem_data = 0;
 
+    // println!("0x{:x}", alu_out);
     match name {
         "lb" => mem_data = sext(mem.mem_read(alu_out, 1).unwrap(), 8),
         "lh" => mem_data = sext(mem.mem_read(alu_out, 2).unwrap(), 16),
         "lw" => mem_data = sext(mem.mem_read(alu_out, 4).unwrap(), 32),
-        "lbu" => mem_data = sext(mem.mem_read(alu_out, 1).unwrap(), 8),
-        "lhu" => mem_data = sext(mem.mem_read(alu_out, 2).unwrap(), 16),
-        "lwu" => mem_data = sext(mem.mem_read(alu_out, 4).unwrap(), 32),
-        "ld" => mem_data = sext(mem.mem_read(alu_out, 8).unwrap(), 64),
+        "lbu" => mem_data = mem.mem_read(alu_out, 1).unwrap(),
+        "lhu" => mem_data = mem.mem_read(alu_out, 2).unwrap(),
+        "lwu" => mem_data = mem.mem_read(alu_out, 4).unwrap(),
+        "ld" => mem_data = mem.mem_read(alu_out, 8).unwrap(),
         "sb" => mem.mem_write(alu_out, 1, src2).unwrap(),
         "sh" => mem.mem_write(alu_out, 2, src2).unwrap(),
         "sw" => mem.mem_write(alu_out, 4, src2).unwrap(),
@@ -288,7 +296,7 @@ pub fn writeback_stage(cpu: &mut CPUState, s: &MEMWBReg) {
     let inst = s.inst;
     let match_res = check_inst(inst);
 
-    let (name, ty) = match match_res {
+    let (name, ..) = match match_res {
         None => {
             println!("{}", "Error".red());
             panic!("Invalid instruction: 0x{:x}", inst);
@@ -300,6 +308,7 @@ pub fn writeback_stage(cpu: &mut CPUState, s: &MEMWBReg) {
     let mem_data = s.mem_data;
     let rd = s.rd;
 
+    // println!("name:= {} rd:= {} \nalu_out = 0x{:x} inst = 0x{:x}", name, rd, alu_out, inst);
     match name {
         "beq" | "bne" | "blt" | "bge" | "bltu" | "bgeu" => (),
         "sb" | "sh" | "sw" | "sd" => (),

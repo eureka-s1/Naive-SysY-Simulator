@@ -2,7 +2,6 @@
 // use crate::common::*;
 // use crate::memory::*;
 
-use crate::simulator::mem;
 use colored::Colorize;
 
 use super::decode::*;
@@ -57,6 +56,7 @@ impl Pipeline {
     }
 
     pub fn init(&mut self) {
+        self.cpu.pc = MEM_BASE;
         self.cpu.reg[0] = 0;
         self.cpu.running = true;
         self.cpu.cycle_count = 0;
@@ -87,7 +87,7 @@ impl Pipeline {
         self.m_reg = execute_stage(&mut self.cpu, &self.E_reg);
 
         // Decode Stage
-        self.e_reg = decode_stage( &self.cpu, &self.D_reg);
+        self.e_reg = decode_stage(&self.cpu, &self.D_reg);
 
         // Fetch Stage
         self.d_reg.pc = self.cpu.pc;
@@ -108,6 +108,7 @@ impl Pipeline {
         if self.d_stall { self.d_stall = false; }
         if self.f_stall { self.f_stall = false; }
 
+
     }
 
     fn exec_stall(&mut self) {
@@ -123,50 +124,36 @@ impl Pipeline {
     }
 
     fn data_hazard(&mut self) {
-        let aluA = self.e_reg.rs1; 
-        let aluB = self.e_reg.rs2;
+        let alu_a = self.e_reg.rs1; 
+        let alu_b = self.e_reg.rs2;
 
-        let dstE = self.E_reg.rd;
-        let dstM = self.M_reg.rd;
+        let dst_e = self.E_reg.rd;
+        let dst_m = self.M_reg.rd;
 
-        if !self.E_reg.store {
-            match self.E_reg.load {
-                true => {
-                    if (dstE == aluA || dstE == aluB) && dstE != 0 {
-                        self.exec_stall();
-                    }
-                },
-                false => {
-                    if dstE == aluA && dstE != 0 {
-                        self.e_reg.src1 = self.m_reg.alu_out;
-                    }
-                    if dstE == aluB && dstE != 0 {
-                        self.e_reg.src2 = self.m_reg.alu_out;
-                    }
-                }
-            }
+        if (alu_a == dst_e && dst_e != 0 && self.E_reg.store == false) || (alu_b == dst_e && dst_e != 0 && self.E_reg.store == false) || 
+        (alu_a == dst_m && dst_m != 0 && self.M_reg.store == false) || (alu_b == dst_m && dst_m != 0 && self.M_reg.store == false) {
+        if((alu_a == dst_e && dst_e != 0 && self.E_reg.store == false)){
+            // exec_stall();
+            if self.E_reg.load == true { self.exec_stall(); }  // load-use hazard
+            else { self.e_reg.src1 = self.m_reg.alu_out; }    
         }
-
-        if !self.M_reg.store {
-            match self.M_reg.load {
-                true => {
-                    if dstM == aluA && dstM != 0 {
-                        self.e_reg.src1 = self.w_reg.mem_data;
-                    }
-                    if dstM == aluB && dstM != 0 {
-                        self.e_reg.src2 = self.w_reg.mem_data;
-                    }
-                },
-                false => {
-                    if dstM == aluA && dstM != 0 {
-                        self.e_reg.src1 = self.w_reg.alu_out;
-                    }
-                    if dstM == aluB && dstM != 0 {
-                        self.e_reg.src2 = self.w_reg.alu_out;
-                    }
-                }
-            }
+        else if ((alu_a == dst_m && dst_m != 0 && self.M_reg.store == false)){
+            // exec_stall();
+            if self.M_reg.load == true { self.e_reg.src1 = self.w_reg.mem_data; } 
+            else { self.e_reg.src1 = self.w_reg.alu_out; }
         }
+        
+        if (alu_b == dst_e && dst_e != 0 && self.E_reg.store == false) {
+            // exec_stall();
+            if self.E_reg.load == true { self.exec_stall(); }  // load-use hazard
+            else { self.e_reg.src2 = self.m_reg.alu_out; }
+        }
+        else if (alu_b == dst_m && dst_m != 0 && self.M_reg.store == false) {
+            // exec_stall();
+            if self.M_reg.load == true { self.e_reg.src2 = self.w_reg.mem_data;  }
+            else {self.e_reg.src2 = self.w_reg.alu_out;}
+        }
+    }
     }
 
     fn branch_pred_miss(&mut self) {    
@@ -198,13 +185,13 @@ impl Pipeline {
         
         println!("{}", "\nPipeline Registers:".blue());
         println!("  IF/ID: PC=0x{:08x}, INST=0x{:08x}", 
-            self.d_reg.pc, self.d_reg.inst);
-        println!("  ID/EX: PC=0x{:08x}, INST=0x{:08x}, RD={}, RS1={}, RS2={}", 
-            self.e_reg.pc, self.e_reg.inst, self.e_reg.rd, self.e_reg.rs1, self.e_reg.rs2);
+            self.D_reg.pc, self.D_reg.inst);
+        println!("  ID/EX: PC=0x{:08x}, INST=0x{:08x}, RD={}, RS1={}, RS2={} src1=0x{:x} src2=0x{:x} imm= 0x{:x}", 
+            self.E_reg.pc, self.E_reg.inst, self.E_reg.rd, self.E_reg.rs1, self.E_reg.rs2, self.E_reg.src1, self.E_reg.src2, self.E_reg.imm);
         println!("  EX/MEM: PC=0x{:08x}, INST=0x{:08x}, RD={}, ALU=0x{:016x}", 
-            self.m_reg.pc, self.m_reg.inst, self.m_reg.rd, self.m_reg.alu_out);
+            self.M_reg.pc, self.M_reg.inst, self.M_reg.rd, self.M_reg.alu_out);
         println!("  MEM/WB: PC=0x{:08x}, INST=0x{:08x}, RD={}, ALU=0x{:016x}", 
-            self.w_reg.pc, self.w_reg.inst, self.w_reg.rd, self.w_reg.alu_out);
+            self.W_reg.pc, self.W_reg.inst, self.W_reg.rd, self.W_reg.alu_out);
         
         println!("\nRegisters:");
         for i in 0..32 {
@@ -216,8 +203,10 @@ impl Pipeline {
                     8 => "s0", 9 => "s1",
                     10 => "a0", 11 => "a1", 12 => "a2", 13 => "a3",
                     14 => "a4", 15 => "a5", 16 => "a6", 17 => "a7",
-                    28 => "t3", 29 => "t4", 30 => "t5", 31 => "t6",
+                    18 => "s2", 19 => "s3", 20 => "s4", 21 => "s5",
+                    22 => "s6", 23 => "s7", 24 => "s8", 25 => "s9",
                     26 => "s10", 27 => "s11",
+                    28 => "t3", 29 => "t4", 30 => "t5", 31 => "t6",
                     _ => continue,
                 };
                 println!("  {} (x{}): 0x{:016x}", name, i, self.cpu.reg[i]);

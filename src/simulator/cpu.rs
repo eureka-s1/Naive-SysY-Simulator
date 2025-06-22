@@ -20,15 +20,7 @@ pub struct CPUState {
     pub running: bool,
 
     /* Sequential execution state */
-    pub stage: Stage,
     pub next_pc: u64,
-    pub inst: u32,
-    pub src1: u64,
-    pub src2: u64,
-    pub imm: u64,
-    pub rd: i32,
-    pub alu_out: u64,
-    pub mem_data: u64,
     
     /* Pipeline state */
     pub pred_pc: u64,
@@ -90,28 +82,14 @@ pub struct MEMWBReg {
     pub store: bool,
 }
 
-pub enum RegStage {
-    IFIDReg,
-    IDEXReg,
-    EXMEMReg,
-    MEMWBReg,
-}
 
 impl CPUState {
     pub fn new() -> Self {
         Self {
             reg: [0; 32],
             pc: MEM_BASE,
-            stage: Stage::Fetch,
             running: false,
             next_pc: 0,
-            inst: 0,
-            src1: 0,
-            src2: 0,
-            imm: 0,
-            rd: 0,
-            alu_out: 0,
-            mem_data: 0,
             pred_pc: 0,
             cycle_count: 0,
             inst_count: 0,
