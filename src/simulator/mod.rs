@@ -7,8 +7,6 @@ mod decode;
 mod instruction;
 
 
-use colored::Colorize;
-use object::pe::IMAGE_DEBUG_TYPE_FIXUP;
 use pipe::Pipeline;
 use mem::Memory;
 use std::io::{self, Write};

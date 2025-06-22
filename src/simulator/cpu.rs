@@ -4,15 +4,6 @@ const MEM_BASE: u64 = 0x8000_0000;
 const MEM_SIZE: usize = 0x80_00000; 
 
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Stage {
-    Fetch,
-    Decode,
-    Execute,
-    Memory,
-    Writeback,
-}
-
 #[derive(Debug)]
 pub struct CPUState {
     pub reg: [u64; 32],
@@ -77,9 +68,6 @@ pub struct MEMWBReg {
     pub rd: i32,
     pub alu_out: u64,
     pub mem_data: u64,
-
-    pub load: bool,
-    pub store: bool,
 }
 
 

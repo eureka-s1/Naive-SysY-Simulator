@@ -1,7 +1,4 @@
-use std::arch::x86_64::CpuidResult;
-
 use colored::Colorize;
-use object::Section;
 
 use super::cpu::*;
 use super::mem::*;
@@ -286,8 +283,6 @@ pub fn memory_stage(cpu: &mut CPUState, s: &EXMEMReg, mem: &mut Memory) -> MEMWB
         rd: s.rd,
         alu_out: alu_out,
         mem_data: mem_data,
-        load: s.load,
-        store: s.store,
     }
 
 }
