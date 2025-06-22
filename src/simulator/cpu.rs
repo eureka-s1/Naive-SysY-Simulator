@@ -1,3 +1,5 @@
+use colored::Colorize;
+
 const MEM_BASE: u64 = 0x8000_0000; 
 const MEM_SIZE: usize = 0x80_00000; 
 
@@ -15,7 +17,8 @@ pub enum Stage {
 pub struct CPUState {
     pub reg: [u64; 32],
     pub pc: u64,
-    
+    pub running: bool,
+
     /* Sequential execution state */
     pub stage: Stage,
     pub next_pc: u64,
@@ -94,17 +97,13 @@ pub enum RegStage {
     MEMWBReg,
 }
 
-// Stage transition
-trait Decode {
-    fn decode(&mut self, inst: u32) -> RegStage;
-}
-
 impl CPUState {
     pub fn new() -> Self {
         Self {
             reg: [0; 32],
             pc: MEM_BASE,
             stage: Stage::Fetch,
+            running: false,
             next_pc: 0,
             inst: 0,
             src1: 0,
@@ -120,4 +119,20 @@ impl CPUState {
             data_hazard_count: 0,
         }
     }
+
+    
+    pub fn halt_trap(&mut self, pc: u64 , code: u64){
+        if code != 0 {
+            println!("{}", "HIT BAD TRAP!".red());
+        }else{
+            println!("{}", "HIT GOOD TRAP!".green());
+            println!("Total instructions executed: {}", self.inst_count);
+            println!("Total cycles: {}\n", self.cycle_count);
+            println!("Total Data Hazard: {}\n", self.data_hazard_count);
+            println!("Total Branch Misprediction: {}", self.branch_count);   
+        }
+        println!("Program ended at pc 0x{:08x}, with exit code {}", pc, code);
+        self.running = false;
+    }
 }
+

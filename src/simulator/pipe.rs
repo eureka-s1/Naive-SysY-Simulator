@@ -5,8 +5,10 @@
 use crate::simulator::mem;
 use colored::Colorize;
 
+use super::decode::*;
 use super::cpu::*;
 use super::mem::*;
+use super::decode::*;
 
 const MEM_BASE: u64 = 0x8000_0000; 
 const MEM_SIZE: usize = 0x80_00000; 
@@ -56,6 +58,7 @@ impl Pipeline {
 
     pub fn init(&mut self) {
         self.cpu.reg[0] = 0;
+        self.cpu.running = true;
         self.cpu.cycle_count = 0;
         self.cpu.inst_count = 0;
         
@@ -73,19 +76,27 @@ impl Pipeline {
 
 
         self.print_state(mem);
+
+        // Write Back Stage
+        writeback_stage(&mut self.cpu, &self.W_reg);
+
+        // Memory Stage
+        self.w_reg = memory_stage(&mut self.cpu, &self.M_reg, mem);
+
+        // Execute Stage
+        self.m_reg = execute_stage(&mut self.cpu, &self.E_reg);
+
         // Decode Stage
-        // todo
-        // self.d_reg.decode(&mut self.d_reg_next);
+        self.e_reg = decode_stage( &self.cpu, &self.D_reg);
 
         // Fetch Stage
         self.d_reg.pc = self.cpu.pc;
         self.d_reg.inst = mem.inst_fetch(self.cpu.pc).expect("Invalid instruction fetch");
         self.cpu.pred_pc = self.cpu.pc.wrapping_add(4);
-
         
         // // Data hazard detection
-        // self.data_hazard();
-        // self.branch_pred_miss();
+        self.data_hazard();
+        self.branch_pred_miss();
 
         // // Update all state 
         self.W_reg = self.w_reg;

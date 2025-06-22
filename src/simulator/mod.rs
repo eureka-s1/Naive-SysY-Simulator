@@ -3,8 +3,11 @@ mod elf;
 mod cpu;
 mod mem;
 mod pipe;
+mod decode;
+mod instruction;
 
 
+use colored::Colorize;
 use object::pe::IMAGE_DEBUG_TYPE_FIXUP;
 use pipe::Pipeline;
 use mem::Memory;
@@ -16,21 +19,16 @@ pub fn pipe_exc() {
     // mem.load_image("testcase/c/hello").unwrap();
     mem.load_image("testcase/bin/dummy.bin").unwrap();
 
-    let mut cpu = Pipeline::new();
-    cpu.init();
+    let mut prog = Pipeline::new();
+    prog.init();
     
-    pipe_exc_once(&mut cpu, &mut mem, true);
-    // let mut running = true;
-    // while running {
-    //     cpu.step(&mut mem);
-    // }
+    pipe_exc_once(&mut prog, &mut mem, true);
 }
 
-pub fn pipe_exc_once(cpu: &mut Pipeline, mem: &mut Memory, mut debug_mode: bool) {
-    let mut running = true;
-    while running {
+pub fn pipe_exc_once(prog: &mut Pipeline, mem: &mut Memory, mut debug_mode: bool) {
+    while prog.cpu.running {
         if !debug_mode {
-            cpu.step(mem);
+            prog.step(mem);
             continue;
         }
 
@@ -48,7 +46,7 @@ pub fn pipe_exc_once(cpu: &mut Pipeline, mem: &mut Memory, mut debug_mode: bool)
             },
             Some("q") => {
                 debug_mode = false;
-                running = false;
+                prog.cpu.running = false;
                 println!("Exiting simulator");
             },
             Some("si") => {
@@ -64,13 +62,13 @@ pub fn pipe_exc_once(cpu: &mut Pipeline, mem: &mut Memory, mut debug_mode: bool)
                 };
 
                 for _ in 0..n {
-                    if !running { break; }
-                    cpu.step(mem);
+                    if !prog.cpu.running { break; }
+                    prog.step(mem);
                 }
             },
             Some("info") => {
                 match parts.next() {
-                    Some("r") => cpu.print_state(mem),
+                    Some("r") => prog.print_state(mem),
                     Some(_) => println!("Invalid info subcommand"),
                     None => println!("Missing subcommand for info"),
                 }
@@ -142,3 +140,4 @@ fn print_help() {
     println!("              (ADDR format: 0x1234 or 1234)");
     println!("  help       - Print this help information");
 }
+
