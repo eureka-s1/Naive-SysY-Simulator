@@ -21,7 +21,7 @@ const REGISTER_NAMES: [&str; 32] = [
 ];
 
 /// 将整个 Koopa `program` 转成一整串 RISC-V 汇编字符串。
-pub fn codegen_assmembly(program: &Program) -> String {
+pub fn build_riscv(program: &Program) -> String {
     let mut output = String::new();
     match program.build(program) {
         Ok(lines) => {

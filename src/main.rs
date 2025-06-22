@@ -9,7 +9,7 @@ use std::fs::read_to_string;
 use std::process::exit;
 
 use irgen::{build_ir, emit_ir};
-use codegen::{build_asm, emit_asm};
+use codegen::{build_riscv, emit_asm};
 mod riscv_codegen;
 
 lalrpop_mod! {
@@ -59,7 +59,7 @@ fn try_main() -> Result<(), Box<dyn std::error::Error>> {
         }
         "-riscv" => {
             // generate ASM
-            let mut asm_program = riscv_codegen::codegen_assmembly(&program);
+            let mut asm_program = build_riscv(&program);
             let output = format!("{}/{}/{}", "testcase", "riscv", output);
             emit_asm(asm_program, output);
         }
