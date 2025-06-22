@@ -10,6 +10,7 @@ use std::process::exit;
 
 use irgen::{build_ir, emit_ir};
 use codegen::{build_asm, emit_asm};
+mod riscv_codegen;
 
 lalrpop_mod! {
     #[allow(clippy::all)]
@@ -58,7 +59,7 @@ fn try_main() -> Result<(), Box<dyn std::error::Error>> {
         }
         "-riscv" => {
             // generate ASM
-            let mut asm_program = build_asm(&program);
+            let mut asm_program = riscv_codegen::codegen_assmembly(&program);
             let output = format!("{}/{}/{}", "testcase", "riscv", output);
             emit_asm(asm_program, output);
         }
