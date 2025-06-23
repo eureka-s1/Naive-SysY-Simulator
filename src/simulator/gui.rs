@@ -10,13 +10,15 @@ pub struct GuiApp {
     command_input: String,
     output: String,
     register_display: String,
-    last_registers: [u64; 32], // 用于跟踪寄存器变化
+    last_registers: [u64; 32], 
 }
 
-impl Default for GuiApp {
-    fn default() -> Self {
+
+impl GuiApp {
+    // 创建自定义构造函数而不是使用 Default
+    pub fn new(output: String) -> Self {
         let mut mem = Memory::new();
-        mem.load_image("testcase/bin/load-store.bin").unwrap();
+        mem.load_image(&output).unwrap();
         let mut pipeline = Pipeline::new();
         pipeline.init(); 
         let last_registers = pipeline.cpu.reg.clone(); // 初始寄存器状态
@@ -35,7 +37,10 @@ impl Default for GuiApp {
         app.update_register_display();
         app
     }
+
+    // ... 其他方法保持不变 ...
 }
+
 
 impl eframe::App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -243,7 +248,7 @@ fn parse_hex_address(s: &str) -> Result<u64, String> {
 }
 
 // 运行 GUI
-pub fn run_gui() -> Result<(), eframe::Error> {
+pub fn run_gui(output: String) -> Result<(), eframe::Error> {
     eframe::run_native(
         "Pipeline Simulator",
         eframe::NativeOptions {
@@ -251,6 +256,6 @@ pub fn run_gui() -> Result<(), eframe::Error> {
                 .with_inner_size([1000.0, 800.0]),  
             ..Default::default()
         },
-        Box::new(|_cc| Box::<GuiApp>::default()),
+        Box::new(|_cc| Box::new(GuiApp::new(output))), 
     )
 }

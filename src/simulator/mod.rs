@@ -11,7 +11,7 @@ use pipe::Pipeline;
 use mem::Memory;
 use std::io::{self, Write};
 
-pub fn pipe_exc() {
+pub fn pipe_exc(output: String) {
     // let mut mem = Memory::new();
 
     // // mem.load_image("testcase/c/hello").unwrap();
@@ -20,7 +20,7 @@ pub fn pipe_exc() {
     // let mut prog = Pipeline::new();
     // prog.init();
     // pipe_exc_once(&mut prog, &mut mem, true);
-    gui::run_gui();
+    gui::run_gui(output);
 }
 
 // pub fn pipe_exc_once(prog: &mut Pipeline, mem: &mut Memory, mut debug_mode: bool) {

@@ -15,8 +15,11 @@
   - **Koopa crate**：利用koopa的crate将 AST 转换为 Koopa IR 在内存形式上的layout。
 - **Codegen：** 目标代码生成模块，将中间代码（Koopa IR）转化为RISC-V汇编代码。
   - **层次结构**：按照`Program`,`Function`,`Value`的层次遍历KoopaIR语句，最后依照`ValueKind`进行pattern matching，匹配不同语句逻辑。
-- **Simulator：** 将RISC-V汇编代码转化为可执行文件的模块。
-
+- **Simulator：** 模拟RISCV执行的模块。
+	- 五周期流水线，实现了RISCV 64I/M 扩展
+	- 实现了数据前递和分支预测
+	- 能够输出周期数和冒险数
+- **Shell GUI：** 展示指令执行和流水线寄存器、寄存器堆的状态
 - **驱动程序**（`main.rs`）：解析命令行参数，根据 `-koopa` ,`-riscv`,`-sim` 模式调用对应的生成函数，并写入输出文件。
   
 
@@ -73,11 +76,43 @@
 - 数组传参时：
   - 若调用时使用的维度个数等于初始化时知道的维度个数，则其为值，补上 load 指令
   - 若调用时使用的维度个数小于初始化时知道的维度个数，则其为指针，补上getelemptr 指令
+  - 
+### 流水线划分
+划分阶段：
+1. $\text{FETCH}$ ：取指令
+2. $\text{DECODE}$：指令译码和读寄存器堆
+3. $\text{EXECUTE}$：执行或计算地址
+4. $\text{MEMORY}$：内存访问
+5. $\text{WRITEBACK}$：写回
+
+经典五级流水线
+
+### 指令解码
+```
+pub const INSTRUCTIONS: &[Instruction] = &[
+    // LUI
+    Instruction { 
+        pattern: "??????? ????? ????? ??? ????? 01101 11",
+        name: "lui",
+        inst_type: InstType::U,
+    },
+    ...
+];
+```
+设置常量 `slice` 来记录各指令的 Pattern，匹配完成后根据 `inst_type, ident` 来完成对应解码和指令执行
+
+### 流水线执行与状态更新
+倒序执行每个阶段（主要是为了解决控制冒险），将结果保存到中间状态，在译码阶段查找是否有 Data Hazard，在执行阶段查找是否有分支预测错误
+
+对于每一个 Stage，实现 `CpuState` 的一个方法，以实现对寄存器的可变借用
+
+### Shell GUI
+借助 `egui` 和 `eframe` 库构建，用于模拟 CPU 流水线的运行，显示程序员可见的各类状态，支持用户通过命令与模拟器交互。
   
 ## 4.测试与运行
 
 程序存放在 testcase/c 目录下
-### 前段代码生成
+### 前端代码生成
 ```
 cargo run -- -koopa hello.c -o hello.koopa 
 ```
@@ -107,13 +142,34 @@ Available commands:
   help       - Print this help information
 ```
 运行展示：
+终端输出结果：
 <video controls src="Naive-SysY-Simulator - Visual Studio Code 2025-06-23 21-10-22.mp4" title="Title"></video>
+图形化界面：
+<video controls src="Pipeline Simulator 2025-06-23 21-38-48.mp4" title="Title"></video>
 
 ## 5.项目分工
 
+盛梓航实现了中间代码生成和 Pipeline Simulator 
 陆奕涵实现了目标代码生成和Pipeline Simulator的图形化和除sim部分外的实验报告
 
-## 6.出勤情况
-陆奕涵 10/14 最后一个月熬夜代码较多，缺勤
+
+
+## 6. 总结与不足
+本项目目标等同为实现一个“山寨版”的 gcc，由于技术复杂性，最后弱化为了一个子集：定义在 SysY 语言上的支持递归函数的“计算器”。但实际上，我们的 Compiler 和 Simulator 能够支持一些 builtin 函数来做到图灵完备（实际SysY本身就是图灵完备的），所以能力其实没差。可以说自上而下一条龙的目标是大部分完成了
+
+在实践中，我们大量运用了 Rust 语言的各种特性，如**模式匹配，`trait`，匿名函数**等等，这些特性极大简化了编码细节。同时，得益于 Rust 的编译期静态类型系统，往往只需要让代码通过编译，就能杜绝绝大部分 bug。
+
+作为一个不算小型的项目，还顺便让我们熟悉了各种 Crate 、Mod 、Item 的组织关系。顺带一提，Cargo 项目管理真的很方便
+
+最后要说的是一点不足：由于各类系统上环境比较复杂，我们最后没有开发出从 .s（RISCV 程序）生成 ELF 文件的自动化工具，所以在测试模拟器时，不在 testcase 内的用例**可能**会出现问题，这也有部分 RISCV 编码规范比较复杂的原因。
+
+## 7.出勤情况
+盛梓航：7/14，早八有时候起不来，看回放
+生活照![alt text](7135f89fdf0b04b2245752226e9afd5.jpg)
+
+
+陆奕涵 10/14,最后一个月熬夜代码较多，缺勤
 生活照：![alt text](2de430440b5bfe49b0cb95a1cb82b86.jpg)
 
+#### 附录： SysY
+[SysY 语言规范 - 北京大学编译实践课程在线文档 | 北大编译实践在线文档](https://pku-minic.github.io/online-doc/#/misc-app-ref/sysy-spec)

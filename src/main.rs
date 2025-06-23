@@ -64,7 +64,8 @@ fn try_main() -> Result<(), Box<dyn std::error::Error>> {
             // let mut asm_program = build_asm(&program);
             // let output = format!("{}/{}/{}.s", "testcase", "riscv", output);
             // emit_asm(asm_program, output);
-            simulator::pipe_exc();
+            let output = format!("{}/{}/{}", "testcase", "bin", output);
+            simulator::pipe_exc(output);
         }
         _ => panic!("Unsupported Mode"),
     }
