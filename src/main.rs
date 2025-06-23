@@ -1,7 +1,6 @@
 mod codegen;
 mod irgen;
 mod simulator;
-mod graph_shell;
 // use koopa::back::KoopaGenerator;
 use lalrpop_util::lalrpop_mod;
 use std::{env::args};
