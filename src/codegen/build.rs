@@ -6,6 +6,8 @@ use koopa::ir::{
     FunctionData, Program, Value, ValueKind,
 };
 use koopa::ir::types::TypeKind;
+use koopa::ir::values::GlobalAlloc;
+
 
 /// RISC-V 寄存器名称（下标对应寄存器编号），我们只用 t0/t1/t2/t6 临时计算，不做持久分配。
 // 函数调用时，前 8 个参数放到 a0–a7（寄存器号 10–17），返回值放到 a0。
@@ -15,11 +17,34 @@ const REGISTER_NAMES: [&str; 32] = [
     "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11",
     "t3", "t4", "t5", "t6",
 ];
+#[derive(Default)]
+struct GlobalSymbolTable {
+    symbols: HashMap<Value, String>, // Value -> String
+    counter: usize, // 用于生成唯一的名字
+}
 
+impl GlobalSymbolTable {
+    // 生成唯一的名字并存储
+    fn generate_name(&mut self, value: Value) -> String {
+        if let Some(name) = self.symbols.get(&value) {
+            return name.clone();
+        }
+
+        let new_name = format!("global_{}", self.counter);
+        self.symbols.insert(value, new_name.clone());
+        self.counter += 1;
+        new_name
+    }
+    pub fn get_global_name(&self, value: Value) -> Option<&str> {
+        self.symbols.get(&value).map(|s| s.strip_prefix('@').unwrap_or(s.as_str()))
+    }
+}
 /// 将整个 Koopa `program` 转成一整串 RISC-V 汇编字符串。
 pub fn build_riscv(program: &Program) -> String {
     let mut output = String::new();
-    match program.build(program) {
+    let mut symbol_table = GlobalSymbolTable::default(); // 初始化符号表
+
+    match program.build(program, &mut symbol_table) {
         Ok(lines) => {
             for line in lines {
                 output.push_str(&line);
@@ -36,28 +61,29 @@ pub fn build_riscv(program: &Program) -> String {
 
 /// 把各个 Koopa IR 组件编译成 RISC-V 指令行。
 pub trait AssBuilder {
-    fn build(&self, program: &Program) -> Result<Vec<String>, String>;
+    fn build(&self, program: &Program, symbol_table: &mut GlobalSymbolTable) -> Result<Vec<String>, String>;
 }
 
+
 impl AssBuilder for Program {
-    fn build(&self, _: &Program) -> Result<Vec<String>, String> {
+    fn build(&self, _: &Program, symbol_table: &mut GlobalSymbolTable) -> Result<Vec<String>, String> {
         let mut program_codes = Vec::new();
 
         // 1) Emit 数据段（.data）
         program_codes.push(".data".to_string());
         for &global in self.inst_layout() {
-            //在终端打印global的名称
-            
             let vd = self.borrow_value(global);
-            // 在终端打印global的类型和名字
-            program_codes.extend(vd.build(self)?);
+            let global_name = symbol_table.generate_name(global);
+            program_codes.push(format!("  .globl {}", global_name));
+            program_codes.push(format!("{}:", global_name));
+            program_codes.extend(vd.build(self, symbol_table)?);
         }
 
         // 2) Emit 代码段（.text）
         program_codes.push(".text".to_string());
         for &func in self.func_layout() {
             if self.func(func).layout().bbs().len() > 0 {
-                program_codes.extend(self.func(func).build(self)?);
+                program_codes.extend(self.func(func).build(self, symbol_table)?);
             }
         }
         Ok(program_codes)
@@ -65,7 +91,7 @@ impl AssBuilder for Program {
 }
 
 impl AssBuilder for FunctionData {
-    fn build(&self, program: &Program) -> Result<Vec<String>, String> {
+    fn build(&self, program: &Program, symbol_table: &mut GlobalSymbolTable) -> Result<Vec<String>, String> {
         let mut function_codes = Vec::new();
 
         // 函数名（去掉 leading '@'）
@@ -545,7 +571,6 @@ impl AssBuilder for FunctionData {
                     // --- 存储: store %value, %ptr ---
                     ValueKind::Store(st) => {
                         // 先打印标记说明这是 store
-                        function_codes.push(format!("  # store: {:?} -> {:?}", st.value(), st.dest()));
                         // 1) 先把要存的值加载到 t0
                         let val_repr = match self.dfg().value(st.value()).kind() {
                             ValueKind::Integer(iv) => {
@@ -646,11 +671,8 @@ impl AssBuilder for FunctionData {
                         } else {
                             // 全局：用 t1 作为地址寄存器，避免覆盖 t0
                             let addr_reg = REGISTER_NAMES[6]; // t1
-                            let dest_name = &program
-                                .borrow_value(st.dest())
-                                .name()
-                                .clone()
-                                .unwrap()[1..];
+                            let dest_name = symbol_table.get_global_name(st.dest())
+            .unwrap_or_else(|| panic!("Store 目标 {:?} 未在符号表中注册", st.dest()));
                             function_codes.push(format!("  la\t{}, {}", addr_reg, dest_name));
                             function_codes.push(format!("  sw\t{}, 0({})", val_repr, addr_reg));
                         }
@@ -659,7 +681,6 @@ impl AssBuilder for FunctionData {
                     // --- 加载: %dst = load %ptr ---
                     ValueKind::Load(ld) => {
                         // 先打印标记说明这是 load
-                        function_codes.push(format!("  # load: {:?} -> {:?}", ld.src(), value));
                         // 1) 判断 src 是否在 slot_offsets
                         if slot_offsets.contains_key(&ld.src()) {
                             // 本地指针：先从栈上或 alloc 计算得到指针，再从 0(指针) 读值
@@ -744,11 +765,8 @@ impl AssBuilder for FunctionData {
                             // 全局：用 t0 取地址，用 t1 从内存里读值
                             let addr_reg = REGISTER_NAMES[5]; // t0
                             let val_reg = REGISTER_NAMES[6];  // t1
-                            let src_name = &program
-                                .borrow_value(ld.src())
-                                .name()
-                                .clone()
-                                .unwrap()[1..];
+                            let src_name = symbol_table.get_global_name(ld.src())
+            .unwrap_or_else(|| panic!("Load 源 {:?} 未在符号表中注册", ld.src()));
                             function_codes.push(format!("  la\t{}, {}", addr_reg, src_name));
                             function_codes.push(format!("  lw\t{}, 0({})", val_reg, addr_reg));
                             let dst_offset = *slot_offsets.get(&value).unwrap_or_else(|| {
@@ -967,7 +985,6 @@ impl AssBuilder for FunctionData {
                     // --- getelemptr: %dst = getelemptr %base, %index ---
                     ValueKind::GetElemPtr(gep) => {
                         // 先打印一个标记，说明是 getelemptr
-                        function_codes.push(format!("  # getelemptr: {:?} -> {:?}", value, gep));
                         let dst_offset = *slot_offsets.get(&value).unwrap_or_else(|| {
                             panic!("Value {:?} not registered in slot_offsets", value)
                         });
@@ -1030,7 +1047,8 @@ impl AssBuilder for FunctionData {
                             //为base_val去掉前缀@
                             //在终端打印base_val
 
-                            let base_name = &program.borrow_value(base_val).name().clone().unwrap()[1..];
+                            let base_name = symbol_table.get_global_name(base_val)
+            .unwrap_or_else(|| panic!("全局变量 {:?} 未在符号表中注册", base_val));
                             function_codes.push(format!("  la\t{}, {}", base_addr_reg, base_name));
 
                         }
@@ -1129,7 +1147,7 @@ impl AssBuilder for FunctionData {
 
                     // --- getptr: %dst = getptr %src, %index ---
                     ValueKind::GetPtr(gep) => {
-                        function_codes.push(format!("  # getptr: {:?} -> {:?}", value, gep));
+
                         let dst_offset = *slot_offsets.get(&value).unwrap_or_else(|| {
                             panic!("Value {:?} not registered in slot_offsets", value)
                         });
@@ -1180,11 +1198,8 @@ impl AssBuilder for FunctionData {
                                 ));
                             }
                         } else {
-                            let base_name = &program
-                                .borrow_value(base_val)
-                                .name()
-                                .clone()
-                                .unwrap()[1..];
+                            let base_name = symbol_table.get_global_name(base_val)
+            .unwrap_or_else(|| panic!("全局变量 {:?} 未在符号表中注册", base_val));
                             function_codes.push(format!("  la\t{}, {}", base_addr_reg, base_name));
                         }
 
@@ -1283,8 +1298,7 @@ impl AssBuilder for FunctionData {
 
                     // --- 返回: return %opt ---
                     ValueKind::Return(ret) => {
-                        // 先打印标记说明是 return
-                        function_codes.push(format!("  # return: {:?}", ret));
+
                         saw_ret = true;
                         if let Some(val) = ret.value() {
                             match self.dfg().value(val).kind() {
@@ -1381,29 +1395,24 @@ impl AssBuilder for FunctionData {
 }
 
 impl AssBuilder for ValueData {
-    /// 处理全局变量（GlobalAlloc）及其初始化（包括数组的 Aggregate 或 ZeroInit）
-    fn build(&self, program: &Program) -> Result<Vec<String>, String> {
+    fn build(&self, program: &Program, symbol_table: &mut GlobalSymbolTable) -> Result<Vec<String>, String> {
         if let ValueKind::GlobalAlloc(global) = self.kind() {
             let mut value_codes = Vec::new();
-            let name = &self.name().clone().unwrap()[1..]; // 去掉前导 '@'
+            
+            // 获取初始化值对应的 Value
+            let init_value = global.init();
+            
+            // 生成全局变量名称
 
-            // --- 1) 如果全局变量的类型是数组，就先根据 init 决定是 ZeroInit 还是 Aggregate ---
+            // --- 处理数组类型全局变量 ---
             if let TypeKind::Array(_, _) = self.ty().kind() {
-                // 先输出 .globl 和 标签
-                value_codes.push(format!(".globl {}", name));
-                value_codes.push(format!("{}:", name));
-
-                // 拿到 initializer 对应的 ValueData
                 let init_value_data = program.borrow_value(global.init());
 
                 match init_value_data.kind() {
-                    // (1) ZeroInit：一次性用 .zero 分配整段空间
                     ValueKind::ZeroInit(_) => {
                         let size_bytes = init_value_data.ty().size();
                         value_codes.push(format!("  .zero {}", size_bytes));
                     }
-
-                    // (2) Aggregate：依次把每个元素展开成 .word <常量>
                     ValueKind::Aggregate(agg) => {
                         for &field in agg.elems() {
                             let field_data = program.borrow_value(field);
@@ -1417,26 +1426,20 @@ impl AssBuilder for ValueData {
                             }
                         }
                     }
-
                     other => {
                         panic!(
-                            "全局数组 {} 的初始化既不是 ZeroInit 也不是 Aggregate，而是 {:?}",
-                            name, other
+                            "全局数组的初始化既不是 ZeroInit 也不是 Aggregate，而是 {:?}",
+                            other
                         );
                     }
                 }
-
                 return Ok(value_codes);
             }
 
-            // --- 2) 如果不是数组，就沿用之前对标量/聚合型全局变量的处理逻辑 ---
-            value_codes.push(format!(".globl {}", name));
-            value_codes.push(format!("{}:", name));
-
-            // 拿到 initializer 对应的 ValueData
+            // --- 处理标量/聚合型全局变量 ---
             let init_value_data = program.borrow_value(global.init());
 
-            // 递归地展开 Integer、ZeroInit、Aggregate
+            // 递归初始化函数
             fn emit_initializer(
                 init_data: &ValueData,
                 program: &Program,
@@ -1456,7 +1459,7 @@ impl AssBuilder for ValueData {
                             emit_initializer(&field_data, program, codes);
                         }
                     }
-                    other => panic!("Unsupported global initializer: {:?}", other),
+                    other => panic!("不支持的全局初始化类型: {:?}", other),
                 }
             }
 
@@ -1472,14 +1475,14 @@ impl AssBuilder for ValueData {
                     emit_initializer(&init_value_data, program, &mut value_codes);
                 }
                 other => panic!(
-                    "Global variable {} has unsupported initializer: {:?}",
-                    name, other
+                    "全局变量有不受支持的初始化类型: {:?}",
+                    other
                 ),
             }
 
             Ok(value_codes)
         } else {
-            panic!("ValueData::build called on non-GlobalAlloc kind");
+            panic!("ValueData::build 只能在 GlobalAlloc 类型上调用");
         }
     }
 }

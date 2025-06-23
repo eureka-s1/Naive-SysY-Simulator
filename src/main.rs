@@ -1,7 +1,7 @@
 mod codegen;
 mod irgen;
 mod simulator;
-
+mod graph_shell;
 // use koopa::back::KoopaGenerator;
 use lalrpop_util::lalrpop_mod;
 use std::{env::args};
@@ -9,9 +9,7 @@ use std::fs::read_to_string;
 use std::process::exit;
 
 use irgen::{build_ir, emit_ir};
-use codegen::{build_riscv, emit_asm};
-mod riscv_codegen;
-
+use codegen::{build_asm, emit_asm};
 lalrpop_mod! {
     #[allow(clippy::all)]
     sysy
@@ -59,7 +57,7 @@ fn try_main() -> Result<(), Box<dyn std::error::Error>> {
         }
         "-riscv" => {
             // generate ASM
-            let mut asm_program = build_riscv(&program);
+            let mut asm_program = build_asm(&program);
             let output = format!("{}/{}/{}", "testcase", "riscv", output);
             emit_asm(asm_program, output);
         }
