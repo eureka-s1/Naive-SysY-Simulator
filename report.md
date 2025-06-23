@@ -121,7 +121,7 @@ cargo run -- -koopa hello.c -o hello.koopa
 cargo run -- -riscv hello.c -o hello.s 
 ```
 生成 RISC-V 代码
-运行展示：
+- 运行展示：
 "hello.c - Naive-SysY-Simulator - Visual Studio Code 2025-06-23 21-04-34.mp4"
 <video controls src="hello.c - Naive-SysY-Simulator - Visual Studio Code 2025-06-23 21-04-34.mp4" title="Title"></video>
 
@@ -142,11 +142,11 @@ Available commands:
               (ADDR format: 0x1234 or 1234)
   help       - Print this help information
 ```
-运行展示：
-终端输出结果：
+- 运行展示：
+  - 终端输出结果：
 "Naive-SysY-Simulator - Visual Studio Code 2025-06-23 21-10-22.mp4"
 <video controls src="Naive-SysY-Simulator - Visual Studio Code 2025-06-23 21-10-22.mp4" title="Title"></video>
-图形化界面：
+  - 图形化界面：
 "Pipeline Simulator 2025-06-23 21-38-48.mp4"
 <video controls src="Pipeline Simulator 2025-06-23 21-38-48.mp4" title="Title"></video>
 
@@ -169,10 +169,10 @@ Available commands:
 ## 7.出勤情况
 盛梓航：7/14，早八有时候起不来，看回放
 
-
-
 陆奕涵 10/14,最后一个月熬夜代码较多，缺勤
 
+## 8.github仓库
+https://github.com/eureka-s1/Naive-SysY-Simulator.git
 
 #### 附录： SysY
 [SysY 语言规范 - 北京大学编译实践课程在线文档 | 北大编译实践在线文档](https://pku-minic.github.io/online-doc/#/misc-app-ref/sysy-spec)
