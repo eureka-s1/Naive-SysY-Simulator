@@ -122,13 +122,14 @@ cargo run -- -riscv hello.c -o hello.s
 ```
 生成 RISC-V 代码
 运行展示：
+"hello.c - Naive-SysY-Simulator - Visual Studio Code 2025-06-23 21-04-34.mp4"
 <video controls src="hello.c - Naive-SysY-Simulator - Visual Studio Code 2025-06-23 21-04-34.mp4" title="Title"></video>
 
 ### 后端代码运行
 ```
-cargo run -- -sim hello.c -o hello.out 
+cargo run -- -sim hello.c -o hello.bin 
 ```
-生成 可执行文件
+执行hello.bin
 这里在图形化窗口Pipeline Simulator上实现了类似gdb的测试操作，可以在输入窗口输入指令，按钮运行。
 可以使用的指令包括：
 ```
@@ -143,8 +144,10 @@ Available commands:
 ```
 运行展示：
 终端输出结果：
+"Naive-SysY-Simulator - Visual Studio Code 2025-06-23 21-10-22.mp4"
 <video controls src="Naive-SysY-Simulator - Visual Studio Code 2025-06-23 21-10-22.mp4" title="Title"></video>
 图形化界面：
+"Pipeline Simulator 2025-06-23 21-38-48.mp4"
 <video controls src="Pipeline Simulator 2025-06-23 21-38-48.mp4" title="Title"></video>
 
 ## 5.项目分工
@@ -165,11 +168,11 @@ Available commands:
 
 ## 7.出勤情况
 盛梓航：7/14，早八有时候起不来，看回放
-生活照![alt text](7135f89fdf0b04b2245752226e9afd5.jpg)
+
 
 
 陆奕涵 10/14,最后一个月熬夜代码较多，缺勤
-生活照：![alt text](2de430440b5bfe49b0cb95a1cb82b86.jpg)
+
 
 #### 附录： SysY
 [SysY 语言规范 - 北京大学编译实践课程在线文档 | 北大编译实践在线文档](https://pku-minic.github.io/online-doc/#/misc-app-ref/sysy-spec)
