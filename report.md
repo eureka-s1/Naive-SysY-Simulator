@@ -104,8 +104,7 @@ Available commands:
 
 ## 5.项目分工
 
-陆奕涵实现了目标代码生成和Pipeline Simulator的图形化
-盛梓航实现了中间代码生成和可执行文件生成
+陆奕涵实现了目标代码生成和Pipeline Simulator的图形化和除sim部分外的实验报告
 
 ## 6.出勤情况
 
