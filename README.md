@@ -114,6 +114,6 @@ Available commands:
 陆奕涵实现了目标代码生成和Pipeline Simulator的图形化和除sim部分外的实验报告
 
 ## 6.出勤情况
-陆奕涵 10/14
+陆奕涵 10/14 最后一个月熬夜代码较多，缺勤
 生活照：![alt text](2de430440b5bfe49b0cb95a1cb82b86.jpg)
 
