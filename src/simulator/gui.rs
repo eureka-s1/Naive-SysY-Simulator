@@ -29,7 +29,7 @@ impl Default for GuiApp {
             command_input: String::new(),
             output: String::new(),
             register_display: String::new(),
-            last_registers, // 保存初始状态
+            last_registers, 
         };
         
         app.update_register_display();
@@ -248,7 +248,7 @@ pub fn run_gui() -> Result<(), eframe::Error> {
         "Pipeline Simulator",
         eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
-                .with_inner_size([1000.0, 800.0]),  // 增大窗口大小以容纳更多内容
+                .with_inner_size([1000.0, 800.0]),  
             ..Default::default()
         },
         Box::new(|_cc| Box::<GuiApp>::default()),

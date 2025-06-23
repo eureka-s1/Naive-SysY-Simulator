@@ -89,3 +89,23 @@ cargo run -- -riscv hello.c -o hello.s
 cargo run -- -sim hello.c -o hello.out 
 ```
 生成 可执行文件
+这里在图形化窗口Pipeline Simulator上实现了类似gdb的测试操作，可以在输入窗口输入指令，按钮运行。
+可以使用的指令包括：
+```
+Available commands:
+  c          - Continue execution
+  q          - Quit the simulator
+  si [N]     - Single step execution (N times, default 1)
+  info r     - Print register state to output
+  x N ADDR   - Examine memory at address ADDR, N words
+              (ADDR format: 0x1234 or 1234)
+  help       - Print this help information
+```
+
+## 5.项目分工
+
+陆奕涵实现了目标代码生成和Pipeline Simulator的图形化
+盛梓航实现了中间代码生成和可执行文件生成
+
+## 6.出勤情况
+
