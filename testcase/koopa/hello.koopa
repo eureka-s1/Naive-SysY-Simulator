@@ -1,5 +1,4 @@
-global %0 = alloc [i32, 10], {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
-global %1 = alloc i32, 1
+global %0 = alloc i32, 0
 
 decl @getint(): i32
 
@@ -19,6 +18,7 @@ decl @stoptime()
 
 fun @main(): i32 {
 %main_0entry:
-  %2 = add 10, 1
+  %1 = load %0
+  %2 = add %1, 1
   ret %2
 }

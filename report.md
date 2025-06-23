@@ -77,6 +77,7 @@
 ## 4.测试与运行
 
 程序存放在 testcase/c 目录下
+### 前段代码生成
 ```
 cargo run -- -koopa hello.c -o hello.koopa 
 ```
@@ -85,6 +86,10 @@ cargo run -- -koopa hello.c -o hello.koopa
 cargo run -- -riscv hello.c -o hello.s 
 ```
 生成 RISC-V 代码
+运行展示：
+<video controls src="hello.c - Naive-SysY-Simulator - Visual Studio Code 2025-06-23 21-04-34.mp4" title="Title"></video>
+
+### 后端代码运行
 ```
 cargo run -- -sim hello.c -o hello.out 
 ```
@@ -101,10 +106,14 @@ Available commands:
               (ADDR format: 0x1234 or 1234)
   help       - Print this help information
 ```
+运行展示：
+<video controls src="Naive-SysY-Simulator - Visual Studio Code 2025-06-23 21-10-22.mp4" title="Title"></video>
 
 ## 5.项目分工
 
 陆奕涵实现了目标代码生成和Pipeline Simulator的图形化和除sim部分外的实验报告
 
 ## 6.出勤情况
+陆奕涵 10/14
+生活照：![alt text](2de430440b5bfe49b0cb95a1cb82b86.jpg)
 
